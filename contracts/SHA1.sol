@@ -1,9 +1,9 @@
 pragma solidity ^0.5.0;
 
-library SHA1 {
+contract SHA1 {
     event Debug(bytes32 x);
 
-    function sha1(bytes memory data) internal pure returns(bytes20 ret) {
+    function sha1(bytes memory data) public pure returns(bytes20 ret) {
         assembly {
             // Get a safe scratch location
             let scratch := mload(0x40)
@@ -41,17 +41,17 @@ library SHA1 {
 
                 // If this is the last block, store the length
                 switch eq(i, sub(totallen, 64))
-                case 1 { mstore(add(scratch, 32), or(mload(add(scratch, 32)), mul(len, 8))) }
+                case 1 { mstore(add(scratch, 32), or(mload(add(scratch, 32)), shl(len, 3))) }
 
                 // Expand the 16 32-bit words into 80
                 for { let j := 64 } lt(j, 128) { j := add(j, 12) } {
                     let temp := xor(xor(mload(add(scratch, sub(j, 12))), mload(add(scratch, sub(j, 32)))), xor(mload(add(scratch, sub(j, 56))), mload(add(scratch, sub(j, 64)))))
-                    temp := or(and(mul(temp, 2), 0xFFFFFFFEFFFFFFFEFFFFFFFEFFFFFFFEFFFFFFFEFFFFFFFEFFFFFFFEFFFFFFFE), and(div(temp, 0x80000000), 0x0000000100000001000000010000000100000001000000010000000100000001))
+                    temp := or(and(shl(temp, 1), 0xFFFFFFFEFFFFFFFEFFFFFFFEFFFFFFFEFFFFFFFEFFFFFFFEFFFFFFFEFFFFFFFE), and(div(temp, 0x80000000), 0x0000000100000001000000010000000100000001000000010000000100000001))
                     mstore(add(scratch, j), temp)
                 }
                 for { let j := 128 } lt(j, 320) { j := add(j, 24) } {
                     let temp := xor(xor(mload(add(scratch, sub(j, 24))), mload(add(scratch, sub(j, 64)))), xor(mload(add(scratch, sub(j, 112))), mload(add(scratch, sub(j, 128)))))
-                    temp := or(and(mul(temp, 4), 0xFFFFFFFCFFFFFFFCFFFFFFFCFFFFFFFCFFFFFFFCFFFFFFFCFFFFFFFCFFFFFFFC), and(div(temp, 0x40000000), 0x0000000300000003000000030000000300000003000000030000000300000003))
+                    temp := or(and(shl(temp, 2), 0xFFFFFFFCFFFFFFFCFFFFFFFCFFFFFFFCFFFFFFFCFFFFFFFCFFFFFFFCFFFFFFFC), and(div(temp, 0x40000000), 0x0000000300000003000000030000000300000003000000030000000300000003))
                     mstore(add(scratch, j), temp)
                 }
 
@@ -92,14 +92,19 @@ library SHA1 {
                     temp := add(f, temp)
                     temp := add(and(x, 0xFFFFFFFF), temp)
                     temp := add(k, temp)
-                    temp := add(div(mload(add(scratch, mul(j, 4))), 0x100000000000000000000000000000000000000000000000000000000), temp)
+                    temp := add(div(mload(add(scratch, shl(j, 2))), 0x100000000000000000000000000000000000000000000000000000000), temp)
                     x := or(div(x, 0x10000000000), mul(temp, 0x10000000000000000000000000000000000000000))
-                    x := or(and(x, 0xFFFFFFFF00FFFFFFFF000000000000FFFFFFFF00FFFFFFFF), mul(or(and(div(x, 0x4000000000000), 0xC0000000), and(div(x, 0x400000000000000000000), 0x3FFFFFFF)), 0x100000000000000000000))
+                    x := or(and(x, 0xFFFFFFFF00FFFFFFFF000000000000FFFFFFFF00FFFFFFFF), mul(
+                    or(and(div(x, 0x4000000000000), 0xC0000000), and(div(x, 0x400000000000000000000), 0x3FFFFFFF)),
+                    0x100000000000000000000))
                 }
 
                 h := and(add(h, x), 0xFFFFFFFF00FFFFFFFF00FFFFFFFF00FFFFFFFF00FFFFFFFF)
             }
-            ret := mul(or(or(or(or(and(div(h, 0x100000000), 0xFFFFFFFF00000000000000000000000000000000), and(div(h, 0x1000000), 0xFFFFFFFF000000000000000000000000)), and(div(h, 0x10000), 0xFFFFFFFF0000000000000000)), and(div(h, 0x100), 0xFFFFFFFF00000000)), and(h, 0xFFFFFFFF)), 0x1000000000000000000000000)
+            ret := mul(
+            or(or(or(or(and(div(h, 0x100000000), 0xFFFFFFFF00000000000000000000000000000000), and(div(h, 0x1000000), 0xFFFFFFFF000000000000000000000000)),
+            and(div(h, 0x10000), 0xFFFFFFFF0000000000000000)), and(div(h, 0x100), 0xFFFFFFFF00000000)), and(h, 0xFFFFFFFF)),
+            0x1000000000000000000000000)
         }
     }
 }
